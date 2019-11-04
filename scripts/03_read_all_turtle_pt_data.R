@@ -30,6 +30,18 @@ for (i in 1:nrow(list_files)) {
 }
 
 
+# code to attempt fixing date errors
+turtle_pts$st_time <-
+        as.Date(turtle_pts$utc, origin = "2011-11-01")
+
+turtle_pts$newdate <-
+        strptime(as.character(turtle_pts$utc), "%Y-%m-%d")
+turtle_pts$newdate2 <-
+        strptime(as.character(turtle_pts$utc), "%d/%m/%Y")
+turtle_pts %>% unite(col = "newdate3", newdate:newdate2, sep = "")
+turtle_pts$newdate[is.na(turtle_pts$newdate)] <- ""
+strftime(x = turtle_pts$utc, tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+
 #-------------------FUNCTION TO CORRECT DATES
 # Make dates consistent format: clean data - change the "/" to "-" in the date columns
 # Funtion to replace / with - which can now be cycled over specific columns
@@ -236,22 +248,4 @@ turtle_pts_sf %>% filter(tag_id == "108800") %>%
         ) +
         tm_text("tag_id")
 
-#write.csv(frst_lst_pts, "./valid_first_last_pts.csv")
 
-frst_lst_pts <- read.csv("./valid_first_last_pts.csv")
-
-frst_lst_pts$st_time <-
-        as.Date(frst_lst_pts$utc, origin = "2011-11-01")
-
-frst_lst_pts$newdate <-
-        strptime(as.character(frst_lst_pts$utc), "%Y-%m-%d")
-frst_lst_pts$newdate2 <-
-        strptime(as.character(frst_lst_pts$utc), "%d/%m/%Y")
-frst_lst_pts %>% unite(col = "newdate3", newdate:newdate2, sep = "")
-frst_lst_pts$newdate[is.na(frst_lst_pts$newdate)] <- ""
-strftime(x = frst_lst_pts$utc, tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
-
-
-
-frst_lst_pts %>% group_by(tag_id) %>%
-        summarise(days = utc[, 1] - utc[, 2])
