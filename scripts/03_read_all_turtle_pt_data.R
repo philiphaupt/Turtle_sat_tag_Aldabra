@@ -78,37 +78,49 @@ turtle_pts_sf %>%
 ald_dir <-
         "E:/gis/GISDATA/ALDABRA/archive/imagery/1998Orthophotos/original/1998_orthophoto_shp/"
 #ald_dir <- "E:/gis/GISDATA/ALDABRA/working files/Aldabra_outlines/"
+
+# 1km mpa boundary
+
 ald_mpa_dir <-
         "E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra/data/input/mpa_boundary-simplified30_utm/"
-#use mpa boundary
 ald <-
         read_sf(paste0(ald_mpa_dir, "mpa_boundary-simplified30_utm.shp"))
-
 ald$label <- "MPA"
 
 ald %>%
         tm_shape() +
         tm_borders("black")
 
+# new mpa boundary
+ald_mpa_new_dir <- "E:/gis/GISDATA/ALDABRA/working files/MPA/designated_mpa_expansion/"
+
+mpa_new <- 
+        read_sf(paste(ald_mpa_new_dir,"MPA_expanded_2018_utm38s.shp", sep = ""))
+
+mpa_new %>% 
+        tm_shape() +
+        tm_borders("black", lty = "dashed")
+
+
 #if not the mpa - you cabn use a buffer to set the area of interest
 #buffer # check project and set distance or reproject
 buf <- st_buffer(ald, dist = 6500) # here for example 1000m
 buf$label <- "6500m"
 
-ald %>%
+mpa_new %>%
         tm_shape() +
         tm_borders("black") +
-        tm_text("label",
-                auto.placement = FALSE,
-                xmod = 0,
-                ymod = 22) +
-        tm_shape(buf) +
-        tm_borders("black", lty = "dashed") +
-        tm_text("label",
-                auto.placement = FALSE,
-                xmod = 0,
-                ymod = 47) +
-        tm_shape(turtle_pts_sf) +
+        # tm_text("label",
+        #         auto.placement = FALSE,
+        #         xmod = 0,
+        #         ymod = 22) +
+        # tm_shape(buf) +
+        # tm_borders("black", lty = "dashed") +
+        # tm_text("label",
+        #         auto.placement = FALSE,
+        #         xmod = 0,
+        #         ymod = 47) +
+         tm_shape(turtle_pts_sf) +
         tm_symbols(
                 col = "tag_id",
                 palette = "Accent",
