@@ -91,7 +91,35 @@ ald %>%
         tm_shape() +
         tm_borders("black")
 
-# new mpa boundary
+#if not the mpa - you cabn use a buffer to set the area of interest
+#buffer # check project and set distance or reproject
+buf <- st_buffer(ald, dist = 6500) # here for example 1000m
+buf$label <- "6500m"
+
+ald %>%
+        tm_shape() +
+        tm_borders("black") +
+        tm_text("label",
+                 auto.placement = FALSE,
+                 xmod = 0,
+                 ymod = 22) +
+        tm_shape(buf) +
+        tm_borders("black", lty = "dashed") +
+        tm_text("label",
+         auto.placement = FALSE,
+                 xmod = 0,
+                 ymod = 47) +
+        tm_shape(turtle_pts_sf) +
+        tm_symbols(
+                col = "tag_id",
+                palette = "Accent",
+                scale = .5,
+                n = 8,
+                alpha = 0.9
+        )
+
+
+# Plot using new mpa boundary
 ald_mpa_new_dir <- "E:/gis/GISDATA/ALDABRA/working files/MPA/designated_mpa_expansion/"
 
 mpa_new <- 
@@ -101,12 +129,71 @@ mpa_new %>%
         tm_shape() +
         tm_borders("black", lty = "dashed")
 
+#plot with points
+mpa_new %>%
+        tm_shape() +
+        tm_borders("black", lty = "dashed") +
+        tm_shape(turtle_pts_sf) +
+        tm_symbols(
+                col = "tag_id",
+                palette = "Accent",
+                scale = .5,
+                n = 8,
+                alpha = 0.9
+        )
 
-#if not the mpa - you cabn use a buffer to set the area of interest
-#buffer # check project and set distance or reproject
-buf <- st_buffer(ald, dist = 6500) # here for example 1000m
-buf$label <- "6500m"
+#st_bbox(ald)
 
+# select last point inside buffer # needs to sort the date system below
+# check projections: these have to be the same to ensure that hte process is correctly carried out
+st_crs(mpa_new)
+st_crs(turtle_pts_sf) # they should be the same, so reproject the points to match Aldabra:
+#reproject aldabra
+turtle_pts_sf_utm38s <- st_transform(turtle_pts_sf, 32738)
+
+#GEOPROCESSING
+#now intersect these to find the points inside the boundary
+pts_subset_inside_mpa_utm38s <-
+        st_intersection(turtle_pts_sf_utm38s, mpa_new)
+
+pts_subset_outside_mpa_utm38s <-
+        st_difference(turtle_pts_sf_utm38s, mpa_new)
+
+
+# Last points inside MPA
+last_pts_inside_mpa <- pts_subset_inside_mpa_utm38s %>%
+        group_by(tag_id) %>%
+        #filter(lc > 1) %>% 
+        filter(utc_fixed == max(utc_fixed))
+
+# first points outside MPA
+first_pts_outside_mpa <- pts_subset_outside_mpa_utm38s %>%
+        group_by(tag_id) %>%
+        #filter(lc > 1) %>% 
+        filter(utc_fixed == min(utc_fixed))
+
+# Very last points (outside) MPA
+last_pts <- pts_subset_outside_mpa_utm38s %>%
+        group_by(tag_id) %>%
+        #filter(lc > 1) %>% 
+        filter(utc_fixed == max(utc_fixed))
+
+#buffer around last points
+last_pts_buffer <- last_pts %>% 
+        st_buffer(dist = 6500) # test value - I know that 6500 m that turtles stuck around Aldabra - so start with that number 
+
+
+# ID all points outside MPA that fall inside buffer to select "feeding grounds"
+feeding_ground_pts <- st_intersection(pts_subset_outside_mpa_utm38s, last_pts_buffer)
+
+# ID the first feeding ground point - inside the 6.5 km buffer - as this is the point when the turtle arrives at the feeding ground
+feeding_ground_pts_first <- feeding_ground_pts %>% 
+        dplyr::group_by(tag_id) %>% 
+        dplyr::filter(utc_fixed == min(utc_fixed))
+        
+
+
+#plot and inspect
 mpa_new %>%
         tm_shape() +
         tm_borders("black") +
@@ -120,60 +207,7 @@ mpa_new %>%
         #         auto.placement = FALSE,
         #         xmod = 0,
         #         ymod = 47) +
-         tm_shape(turtle_pts_sf) +
-        tm_symbols(
-                col = "tag_id",
-                palette = "Accent",
-                scale = .5,
-                n = 8,
-                alpha = 0.9
-        )
-
-#st_bbox(ald)
-
-# select last point inside buffer # needs to sort the date system below
-# check projections: these have to be the same to ensure that hte process is correctly carried out
-st_crs(ald)
-st_crs(turtle_pts_sf) # they should be the same, so reproject the points to match Aldabra:
-#reproject aldabra
-turtle_pts_sf_utm38s <- st_transform(turtle_pts_sf, 32738)
-
-#GEOPROCESSING
-#now intersect these to find the points inside the boundary
-pts_subset_inside_mpa_utm38s <-
-        st_intersection(turtle_pts_sf_utm38s, ald)
-
-pts_subset_outside_mpa_utm38s <-
-        st_difference(turtle_pts_sf_utm38s, ald)
-
-
-# Last points inside MPA
-last_pts_inside_mpa <- pts_subset_inside_mpa_utm38s %>%
-        group_by(tag_id) %>%
-        filter(lc > 1) %>% 
-        filter(POSIX_1 == max(POSIX_1))
-
-# first points outside MPA
-first_pts_outside_mpa <- pts_subset_outside_mpa_utm38s %>%
-        group_by(tag_id) %>%
-        filter(lc > 1) %>% 
-        filter(POSIX_1 == min(POSIX_1))
-
-#plot and inspect
-ald %>%
-        tm_shape() +
-        tm_borders("black") +
-        tm_text("label",
-                auto.placement = FALSE,
-                xmod = 0,
-                ymod = 22) +
-        tm_shape(buf) +
-        tm_borders("black", lty = "dashed") +
-        tm_text("label",
-                auto.placement = FALSE,
-                xmod = 0,
-                ymod = 47) +
-        turtle_pts_sf %>% filter(lc > 0) %>% 
+        turtle_pts_sf %>% 
         tm_shape() +
         tm_symbols(
                 col = "tag_id",
@@ -207,6 +241,67 @@ ald %>%
         tm_text("tag_id")
 
 
+# Plot of last points inside MPAandfinal points, and buffer and the selected points outside MPA.
+mpa_new %>%
+        tm_shape() +
+        tm_borders("black") +
+        tm_shape(last_pts_buffer) +
+        tm_borders("black", lty = "dashed") +
+        turtle_pts_sf %>% 
+        tm_shape() +
+        tm_symbols(
+                col = "grey",
+                #palette = "Accent",
+                scale = .2,
+                #n = 8,
+                alpha = 0.9
+        ) +
+        tm_shape(last_pts_inside_mpa) +
+        tm_symbols(
+                col = "blue",
+                scale = 0.9,
+                alpha = 0.5,
+                size = 2
+        ) +
+        tm_text("tag_id") +
+        tm_shape(last_pts) +
+        tm_symbols(
+                col = "red",
+                scale = 0.9,
+                alpha = 0.5,
+                size = 2
+        ) +
+        tm_text("tag_id") +
+        tm_shape(last_pts_buffer)+
+        tm_borders(
+                col = "black", 
+                lty = "dashed"
+                ) +
+        #tm_shape(feeding_ground_pts) +
+        #tm_symbols(col = "grey") +
+        tm_shape(feeding_ground_pts_first) +
+        tm_symbols(
+                col = "cornflowerblue",
+                scale = .5,
+                alpha = .9,
+                size = 3)
+        
+        
+# calculate the number of days
+#something not right here still - negative numbers?
+(feeding_ground_pts_first$utc_fixed-last_pts_inside_mpa$utc_fixed)
+
+feeding_ground_pts_first$tag_id
+last_pts_inside_mpa$tag_id
+feeding_ground_pts_first$utc_fixed
+last_pts_inside_mpa$utc_fixed
+
+
+#
+
+# Create a variable taht contains all the points from the last pont inside MPa to the fisrt point at feeding site,
+#  create a straight line variable connecting point to point to calculate hte distance
+# divide the distance of the time taken
 
 # 108799 may be problemmatic using this criteria - as first points ouside MPA are miles away
 #plots looking only at 108799 track
