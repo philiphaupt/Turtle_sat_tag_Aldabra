@@ -59,6 +59,8 @@ turtle_pts_sf <-
 #change tag id to factor to change legend in plot ouputs to categorical
 turtle_pts_sf$tag_id <- as.factor(turtle_pts_sf$tag_id)
 
+write_rds(turtle_pts_sf,"./data/turtle_pts_sf.rds")
+
 #plot points on map for inspection
 tmap_mode("view") # set mode as interactive
 #plot commands
@@ -125,6 +127,8 @@ ald_mpa_new_dir <- "E:/gis/GISDATA/ALDABRA/working files/MPA/designated_mpa_expa
 mpa_new <- 
         read_sf(paste(ald_mpa_new_dir,"MPA_expanded_2018_utm38s.shp", sep = ""))
 
+write_rds(mpa)
+
 mpa_new %>% 
         tm_shape() +
         tm_borders("black", lty = "dashed")
@@ -178,13 +182,14 @@ last_pts <- pts_subset_outside_mpa_utm38s %>%
         #filter(lc > 1) %>% 
         filter(utc_fixed == max(utc_fixed))
 
-#buffer around last points
+#buffer around last points to allow selecting all the points inside the 6.5 km buffer, in turn ,to select the first point inside this 6.5 km bffer - which can be regarded as the point of arrival in the fedding grounds.
 last_pts_buffer <- last_pts %>% 
         st_buffer(dist = 6500) # test value - I know that 6500 m that turtles stuck around Aldabra - so start with that number 
 
 
-# ID all points outside MPA that fall inside buffer to select "feeding grounds"
-feeding_ground_pts <- st_intersection(pts_subset_outside_mpa_utm38s, last_pts_buffer)
+# ID all points outside Aldabra MPA that fall inside buffer to select "feeding grounds"
+feeding_ground_pts <- st_intersection(pts_subset_outside_mpa_utm38s, last_pts_buffer) %>% 
+        select(1:13)
 
 # ID the first feeding ground point - inside the 6.5 km buffer - as this is the point when the turtle arrives at the feeding ground
 feeding_ground_pts_first <- feeding_ground_pts %>% 
@@ -192,6 +197,12 @@ feeding_ground_pts_first <- feeding_ground_pts %>%
         dplyr::filter(utc_fixed == min(utc_fixed))
         
 
+# # ID the first feeding ground point - inside the 6.5 km buffer - as this is the point when the turtle arrives at the feeding ground
+# feeding_ground_pts <- feeding_ground_pts %>% 
+#         dplyr::group_by(tag_id) %>% 
+#         #dplyr::filter(utc_fixed == min(utc_fixed)) %>% 
+#         #dplyr::mutate(fg_arrival = (utc_fixed == min(utc_fixed)), "test")
+#         dplyr::mutate(fg_arrival = min(utc_fixed))
 
 #plot and inspect
 mpa_new %>%
@@ -289,6 +300,19 @@ mpa_new %>%
         
 # calculate the number of days
 #something not right here still - negative numbers?
+fdg_df <- st_set_geometry(feeding_ground_pts_first, NULL) %>% 
+        select(tag_id,utc_end = utc_fixed)
+
+mpa_in_df <- st_set_geometry(last_pts_inside_mpa, NULL) %>% 
+        select(tag_id,utc_start = utc_fixed)
+
+travel_time <- full_join(mpa_in_df,
+                fdg_df,
+                by = "tag_id")
+#final calculation fo rnumber of days taken        ) 
+travel_time$time_take <- difftime(travel_time$utc_end, travel_time$utc_start)#, format = "%Y-%m-%d %H:%M") # 3rd gives NA
+
+
 (feeding_ground_pts_first$utc_fixed-last_pts_inside_mpa$utc_fixed)
 
 feeding_ground_pts_first$tag_id
