@@ -6,62 +6,58 @@ library(data.table)
 library(sf)
 library(tmap)
 library(lubridate)
-# Data is stored in:
+
+#------------------------------------------------
+# 1. Read in shapefile data, and store all data in a single table which retains the geomotry and date values.
+
+# Directory where data is stored in:
 data_dir <-
         "E:/gis/GISDATA/ALDABRA/working files/turtle/sat_tag_data/copy_points/"
 
+# Produce character vector of filne names inside the directory specifid above: i.e. all the point files
 list_files <- list.files(data_dir) %>%
         as_tibble() %>%
         rename(file_name = value) %>%
         filter(grepl(".shp", file_name))
-#dplyr::filter(grepl(".dbf",file_name)) %>%
-#dplyr::filter(grepl("points", file_name)) #%>%
-#as.list(list_files)
 
-#define data frame in which data will be stored
-turtle_pts <- data.frame()
 
+# Define data frame in which data will be stored
+turtle_pts <- data.frame() # empty still
+
+# Use  for loop to allow repeating the reading process (i.e. read each file sequentially)
 for (i in 1:nrow(list_files)) {
-        dbf_tmp <- sf::read_sf(paste0(data_dir, list_files[i, ]))
-        dbf_tmp2 <- dbf_tmp %>%
-                #st_set_geometry(NULL) %>%
+        dbf_tmp <- sf::read_sf(paste0(data_dir, list_files[i, ])) # read in spatial shapefile data
+        dbf_tmp2 <- dbf_tmp %>% # and only select fields of interest
                 dplyr::select(tag_id, utc, POSIX, POSIX_1, local_time, lc)
-        turtle_pts <-
+        turtle_pts <- # bind these data into a table, and add the next to this, and the next etc.
                 rbindlist(list(turtle_pts, dbf_tmp2), use.names = T) #for each iteration, bind the new data to the building dataset
 }
 
 
-
-#-------------------FUNCTION TO CORRECT DATES
-# Make dates consistent format: clean data - change the "/" to "-" in the date columns
-# Funtion to replace / with - which can now be cycled over specific columns
-#replace_date <- function(x, na.rm = FALSE) {
-#        str_replace_all(x, "/", "-")
-#}
-
-# APLLY FUNCTION: this cycles the function applied to a vector (each specified column) and applies teh replacement function created above
-# turtle_pts_cln <- turtle_pts %>%
-#         mutate_at(c("utc", "local_time"), replace_date)
-
-# !still a problem - data and year not in correct order! may use posix to see if it solves the problem
-
-
+#---------------------------------------------
+# 2. Clean data: CORRECT DATES
+# The dates read in are in incosistent format which will cause problems when trying to do calculations with them, the following corrects this
 turtle_pts$utc_fixed <- parse_date_time(turtle_pts$utc, c("%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M"))
 turtle_pts$local_fixed <- parse_date_time(turtle_pts$local_time, c("%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M"))
 
 
 #---------------------------------------------
+# 3. Convert data frame wtih geometry column to a defined R spatial object.
 # convert the turtle data frame with the spatial column to a sf object o that we can use it in plots.
 turtle_pts_sf <-
         turtle_pts %>%
         st_as_sf()
 
-#change tag id to factor to change legend in plot ouputs to categorical
+#----------------------------------------------
+# 4. Change tag id to factor to change legend in plot ouputs to categorical
 turtle_pts_sf$tag_id <- as.factor(turtle_pts_sf$tag_id)
 
+# 5. save R object to allow calling it up in future without having to run all the read and cleaning scripts.
 write_rds(turtle_pts_sf,"./data/turtle_pts_sf.rds")
 
-#plot points on map for inspection
+#-----------------------------------------------
+
+# Plot points on map for inspection
 tmap_mode("view") # set mode as interactive
 #plot commands
 turtle_pts_sf %>%
@@ -311,42 +307,5 @@ travel_time <- full_join(mpa_in_df,
                 by = "tag_id")
 #final calculation for number of days taken        ) 
 travel_time$time_take <- difftime(travel_time$utc_end, travel_time$utc_start)#, format = "%Y-%m-%d %H:%M") # 3rd gives NA
-
-
-
-#
-
-# Create a variable taht contains all the points from the last pont inside MPa to the fisrt point at feeding site,
-#  create a straight line variable connecting point to point to calculate hte distance
-# divide the distance of the time taken
-
-# 108799 may be problemmatic using this criteria - as first points ouside MPA are miles away
-#plots looking only at 108799 track
-# turtle_pts_sf %>% filter(tag_id == "108799") %>%
-#         tm_shape() +
-#         tm_symbols(
-#                 #col = "tag_id",
-#                 #palette = "Accent",
-#                 scale = .5,
-#                 #n = 8,
-#                 alpha = 0.9
-#         ) +
-#         last_pts_inside_mpa %>% filter(tag_id == "108799") %>% 
-#         tm_shape() +
-#         tm_symbols(
-#                 col = "blue",
-#                 scale = 0.9,
-#                 alpha = 0.5,
-#                 size = 2
-#         ) +
-#         first_pts_outside_mpa %>% filter(tag_id == "108799") %>% 
-#         tm_shape() +
-#         tm_symbols(
-#                 col = "red",
-#                 scale = 0.9,
-#                 alpha = 0.5,
-#                 size = 2
-#         ) +
-#         tm_text("tag_id")
 
 
