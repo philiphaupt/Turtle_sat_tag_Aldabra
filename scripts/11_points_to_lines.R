@@ -1,6 +1,7 @@
 #aim points to lines for each turtle
 library(tidyverse)
 library(sf)
+library(tmap)
 
 #read in data
 turtle_points_start_to_end <- read_rds("./data/turtle_points_start_to_end.rds")
@@ -29,3 +30,6 @@ turtle_lines[c(1,2,3,4,5,7,8),] %>%
                    scale = .2,
                    size = 2,
                    alpha = 0.95)
+
+
+sf::st_write(turtle_lines, "turtle_points_start_to_end.gpkg", layer = "plotting_lines", layer_options = c("update = TRUE"))
