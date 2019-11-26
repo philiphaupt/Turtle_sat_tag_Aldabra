@@ -168,17 +168,22 @@ list2env(shps_gadm,globalenv())
 class(KEN)
 class(KEN_gadm)
 
-KEN_gadm <- st_as_sf(KEN_gadm)
+KEN_gadm <- KEN_gadm %>% as_Spatial() %>% 
+        st_as_sf()
 
-st_set_crs(KEN,KEN_gadm)
-st_crs(shps_gadm[[5]])
-st_transform(KEN)#START HERE
+
+st_crs(KEN_gadm)
+st_crs(KEN)
+KEN <- st_transform(KEN, 4326)
+
+#START HERE
  KEN_MPA <- KEN %>%
          filter(MARINE == "terrestrial") %>%
-         st_intersection(shps_gadm[[5]]) %>%
-         rbind(KEN_MPA %>%
-                       filter(MARINE == "marine") %>%
-                       st_difference(shps_gadm[[5]])) %>%
-         rbind(KEN_MPA %>% filter(!MARINE %in% c("terrestrial",
-                                                     "marine")))
+         st_intersection(KEN_gadm) %>%
+         # rbind(KEN_MPA %>%
+         #               filter(MARINE == "marine") %>%
+         #               st_difference(KEN_gadm)) %>%
+         # rbind(KEN_MPA %>% 
+         filter(!MARINE %in% c("terrestrial",
+                                                     "marine"))
  
