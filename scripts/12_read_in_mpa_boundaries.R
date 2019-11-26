@@ -159,3 +159,26 @@ gadms_union <- st_union(gamds)
 #                       st_difference(mlt_boundary_data)) %>%
 #         rbind(mlt_pa_data %>% filter(!MARINE %in% c("terrestrial",
 #                                                     "marine")))
+#test
+
+names(shps_gadm) <- paste0(my_country_codes, "_gadm")
+
+list2env(shps_gadm,globalenv())
+
+class(KEN)
+class(KEN_gadm)
+
+KEN_gadm <- st_as_sf(KEN_gadm)
+
+st_set_crs(KEN,KEN_gadm)
+st_crs(shps_gadm[[5]])
+st_transform(KEN)#START HERE
+ KEN_MPA <- KEN %>%
+         filter(MARINE == "terrestrial") %>%
+         st_intersection(shps_gadm[[5]]) %>%
+         rbind(KEN_MPA %>%
+                       filter(MARINE == "marine") %>%
+                       st_difference(shps_gadm[[5]])) %>%
+         rbind(KEN_MPA %>% filter(!MARINE %in% c("terrestrial",
+                                                     "marine")))
+ 
