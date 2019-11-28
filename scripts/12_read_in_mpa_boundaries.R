@@ -6,6 +6,7 @@ library(ggmap)
 library(lwgeom)
 library(countrycode)
 library(mapedit)
+library(tmap)
 
 # 1. Specify a list of countiries along with their ISO 3 codes
 # why? this allows match these countries to online databases of administrative and protected area boundaries.
@@ -14,19 +15,29 @@ library(mapedit)
 
 #--------------------------------------------------------------------
 # USER Defined list of countries for which to obtain protected areas:
-my_country_list <- c("Somalia", "Tanzania", "Mozambique", "Comoros","Kenya", "Seychelles", "Madagascar")
+my_country_list <-
+        c("Somalia",
+          "Tanzania",
+          "Mozambique",
+          "Comoros",
+          "Kenya",
+          "Seychelles",
+          "Madagascar")
 #--------------------------------------------------------------------
 
 
 # Define the list of ISO3 country codes: this will allow easier matching when adminstrative boundaries need to be matches to the protected areas gievn the ISO 3 codes used in the file names of admininstrative boundaries
 my_country_codes <- list()
 for (k in seq_along(my_country_list)) {
-        my_country_codes[k] <- countrycode::codelist$iso3c[codelist$country.name.en[1:length(codelist$country.name.en)] == my_country_list[k]]
+        my_country_codes[k] <-
+                countrycode::codelist$iso3c[codelist$country.name.en[1:length(codelist$country.name.en)] == my_country_list[k]]
 }
 
 #combine these list into a single dataframe called my_countries_df, and remove superflous r objects
-my_country_list_df <- data.frame(matrix(unlist(my_country_list)), stringsAsFactors = FALSE)
-my_country_codes_df <- data.frame(matrix(unlist(my_country_codes)), stringsAsFactors = FALSE)
+my_country_list_df <-
+        data.frame(matrix(unlist(my_country_list)), stringsAsFactors = FALSE)
+my_country_codes_df <-
+        data.frame(matrix(unlist(my_country_codes)), stringsAsFactors = FALSE)
 my_countries_df <- cbind(my_country_list_df, my_country_codes_df)
 names(my_countries_df) <- c("country_name", "country_code")
 rm(my_country_list_df, my_country_codes_df)
@@ -39,108 +50,91 @@ my_country_codes <- unlist(my_country_codes)
 ## https://prioritizr.github.io/wdpar/articles/wdpar.html
 ## https://cran.rstudio.com/web/packages/wdpar/readme/README.html
 
-# find url for each of the user selected coutries in my_country_list
-download_urls <- list()
-for (i in seq_along(my_country_list)) {
-        download_urls[i] <- wdpa_url(my_country_list[i], wait = TRUE)
-}
+# # find url for each of the user selected coutries in my_country_list
+# download_urls <- list()
+# for (i in seq_along(my_country_list)) {
+#         download_urls[i] <- wdpa_url(my_country_list[i], wait = TRUE)
+# }
+# #
+# # # add country names and codes to the urls in a new data frame
+# download_urls_df <-
+#         as.data.frame(matrix(
+#                 unlist(download_urls),
+#                 nrow = length(download_urls),
+#                 byrow = TRUE
+#         ), stringsAsFactors = FALSE)
+# 
+# download_urls_df <- cbind(download_urls_df, my_countries_df)
+# download_urls_df <- download_urls_df %>% dplyr::rename(url = V1)
+# download_urls_df$url <-
+#         as.character(download_urls_df$url) # make sure urls are character
+# #
+# #
+# # # paths to save file zipfile with data: Currently this a temporary file location: May want to copy a "fixed version" to ensure tha this can be exactly replicated
+# path <- tempfile(pattern = paste0("WDPA_",download_urls_df$country_code,"_"), fileext = ".zip")
+# #
+# # # download zipfile
+# downloaded_zip_files <- list()
+# for (h in 1:(nrow(download_urls_df))) {
+#          downloaded_zip_files[h] <- httr::GET(download_urls_df[h,1], httr::write_disk(path[h], overwrite = TRUE))
+# }
+# #
+# # # load data (downloaded files of MPA boundaries) into R environment
+# pa_raw <- lapply(path, function(x) {wdpar::wdpa_read(x)})
 
-# add country names and codes tot eh urls in a new data frame
-download_urls_df <- as.data.frame(matrix(unlist(download_urls), nrow=length(download_urls),byrow = TRUE), stringsAsFactors = FALSE)
-download_urls_df <- cbind(download_urls_df, my_countries_df)
-download_urls_df <- download_urls_df %>% dplyr::rename(url = V1)
-download_urls_df$url <- as.character(download_urls_df$url) # make sure urls are character
+#---SHORTER ALTERNATIVE DOWNLOAD
+#
 
-
-# paths to save file zipfile with data: Currently this a temporary file location: May want to copy a "fixed version" to ensure tha this can be exactly replicated
-path <- tempfile(pattern = paste0("WDPA_",download_urls_df$country_code,"_"), fileext = ".zip")
-
-# download zipfile
-downloaded_zip_files <- list()
-for (h in 1:(nrow(download_urls_df))) {
-        downloaded_zip_files[h] <- httr::GET(download_urls_df[h,1], httr::write_disk(path[h], overwrite = TRUE))
-}
-
-# load data (downloaded files of MPA boundaries) into R environment
-shps <- lapply(path, function(x) {wdpar::wdpa_read(x)}) 
-
-shps <- lapply(my_country_list, function(x) {wdpar::wdpa_fetch(x)}) 
+pa_raw <-
+         lapply(my_country_list, function(x) {
+                 wdpar::wdpa_fetch(x)
+         })
 
 # assign the country names to each sf object
-# names(shps) <- my_country_list
-names(shps) <- my_countries_df$country_code
-# purrr::map(shps, names)
+names(pa_raw) <- my_country_codes
+purrr::map(pa_raw, names)
+purrr::map(pa_raw, class)
 
-#--------------------------------------------------
-SOM_clean <- wdpa_clean(shps[[1]]) # Somalia's protected areas is problematic: they are only represented by points, and none are MARINE - so answer is that it is not relvant. 
-shps_clean <- purrr::map(.x = shps[2:7], .f = wdpa_clean) # works
-#--------------------------------------------------
+class_geom_in_list <- function(x) {
+        x$geometry %>% class()
+}
+purrr::map(.x = pa_raw[1:7], .f = class_geom_in_list)
 
-st_transform_4326 <- function(x) {sf::st_transform(x, crs = 4326)}
-shps_clean_repro <- purrr::map(shps_clean, st_transform_4326)
-map(shps_clean_repro, st_crs)
-# seperate list into shapes and apply st_union *super handy remember this function!
-# list2env(shps_clean,globalenv()) # The objects in the list have to be named to work!
-# list2env(shps[1],globalenv())
-
-# combine protected areas into a single sf object
-protected_areas <- mapedit:::combine_list_of_sf(shps_clean, crs = 4326) %>% 
+#--------------------
+# combine protected areas into a single sf object - remove Somlia: Somalia's protected areas is problematic: they are only represented by points, and none are MARINE - so answer is that it is not relvant.
+protected_areas <-
+        mapedit:::combine_list_of_sf(pa_raw[2:7], crs = 4236) %>%
         lwgeom::st_make_valid()
-# the below did not work - notes for now, but dead code 
+
+#--------------------------------------------------
+#SOM_clean <- wdpa_clean(pa_raw$SOM) # Somalia's protected areas is problematic: they are only represented by points, and none are MARINE - so answer is that it is not relvant.
+#class(pa_raw$SOM$geometry)
+#pa_raw_clean <- purrr::map(.x = pa_raw[2:7], .f = wdpa_clean) # works
+
+
+#--------------------------------------------------
+# make sure projections match
+# st_transform_4326 <- function(x) {sf::st_transform(x, crs = 4326)}
+# pa_raw_clean_repro <- purrr::map(pa_raw_clean, st_transform_4326)
+# map(pa_raw_clean_repro, st_crs)
+
+# seperate list into shapes and apply st_union *super handy remember this function!
+# list2env(pa_raw_clean,globalenv()) # The objects in the list have to be named to work!
+# list2env([1],globalenv())
+
+
+
+# the below did not work - notes for now, but dead code
 # pa_aoi <- st_union(call(as.vector(my_countries_df[2:8,2])))# union - needs fixing - somthing not quite right
 # my_countries_mpa_union <- sf::st_union(TZA, MOZ, COM, KEN, SYC, MUS, MDG)
 
-#---------------------------------------------
-# Choose only relevant MPAs
 
-# 1. Limit the protected areas to marine areas - remove land PAs.
-## 1.1 Manually dowload administrative boundaries for the coutnries in my list:
-## from: https://gadm.org/data.html : Select the data tab, a menu with a drop down list appears, where you can select the country that you want to download, and the different levels: level 0 (lowest level of detail is needed) 
-## NB! To automate: When you hovver over the format that you want to download, the www address for the actual file appears - lets use this with pattern recognition to download the files that we need.
-
-#path to gadm files
-path_gadm <- tempfile(pattern = paste0("gadm36_", my_country_codes,"_0_sf"), fileext = ".rds")
-
-
-downloaded_urls_gadm <- list()
-for (m in seq_along(my_country_codes)) {
-        downloaded_urls_gadm[m] <- paste0("https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_", my_country_codes[m] ,"_0_sf.rds")
-        #downloaded_gadm_files[m] <- httr::GET(downloaded_urls_gadm[m], httr::write_disk(path_gadm[m], overwrite = TRUE))
-}
-
-downloaded_gadm_files <- list()
-for (n in seq_along(my_country_codes)) {
-        #downloaded_urls_gadm[m] <- paste0("https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_", my_country_codes[m] ,"_0_sf.rds")
-        downloaded_gadm_files[n] <- httr::GET(downloaded_urls_gadm[[n]], httr::write_disk(path_gadm[n], overwrite = TRUE))
-}
-
-
-# load data (downloaded files of MPA boundaries) into R environment
-shps_gadm <- lapply(path_gadm, function(x) {read_rds(x)}) 
-names(shps_gadm) <- my_country_codes
-
-########## START HERE - this will save re-downloading all the files - temp
-# write_rds(shps_clean, "./data/preprocessed/shps_clean.rds")
-# write_rds(shps_gadm, "./data/preprocessed/shps_gadm.rds")
-# shps_clean <- read_rds("./data/preprocessed/shps_clean.rds")
-# shps_gadm <- read_rds("./data/preprocessed/shps_gadm.rds")
-#check projections
-# map(shps_clean, st_crs) # assumed to be wgs84, lat long
-## countries are in the input folder
-# gadm_dir <- "E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra/data/gadm_countries/"
-# gadm_files <- list.files(gadm_dir)
-# map(shps_gadm, st_crs)
-#--------------------
-
-# combine administrative boundaries into a single sf object
-admin_areas <- mapedit:::combine_list_of_sf(shps_gadm, crs = 4326) %>%
-        lwgeom::st_make_valid()
 
 # Alterantive source of gadm data?:
 # library(raster)
 # misc = list()
 # misc$countries = c("ZAF", "LSO", "SWZ", "ZWE", "MOZ", "NAM", "BWA")
-# ctry_shps = do.call("bind", lapply(misc$countries, 
+# ctry_shps = do.call("bind", lapply(misc$countries,
 #                                    function(x) getData('GADM', country=x, level=0)))
 
 
@@ -158,46 +152,125 @@ admin_areas <- mapedit:::combine_list_of_sf(shps_gadm, crs = 4326) %>%
 
 
 #test clipping
-names(shps_gadm) <- paste0(my_country_codes, "_gadm")
-
-list2env(shps_gadm,globalenv())
-
-class(KEN)
-class(KEN_gadm)
-
-KEN_gadm <- KEN_gadm %>% as_Spatial() %>% 
-        st_as_sf()
-
-
-st_crs(KEN_gadm)
-st_crs(KEN)
-KEN <- st_transform(KEN, 4326)
-
+# names(shps_gadm) <- paste0(my_country_codes, "_gadm")
+#
+# list2env(shps_gadm,globalenv())
+#
+# class(KEN)
+# class(KEN_gadm)
+#
+# KEN_gadm <- KEN_gadm %>% as_Spatial() %>%
+#         st_as_sf()
+#
+#
+# st_crs(KEN_gadm)
+# st_crs(KEN)
+# KEN <- st_transform(KEN, 4326)
+#-------------------------------------------------------
 #START HERE
 # MPAs_and_partial <- protected_areas %>%
-#          filter(!MARINE == "terrestrial") 
+#          filter(!MARINE == "terrestrial")
 
 MPAs <- protected_areas %>%
-        filter(MARINE == "marine") 
+        dplyr::filter(!MARINE == 0) %>%
+        lwgeom::st_make_valid() %>% 
+        st_as_sf()
 
+class(MPAs)
+#view the protected areas on a map
+tmap_mode("view")
+tm_shape(MPAs) +
+        tm_borders(col = "forestgreen")
+
+# To follow up:
+MPAs_clean <- wdpa_clean(MPAs$geometry, crs = 4326) # Error? Error: x does not inherit from class sf
+
+
+#---------------------------------------------
+# Choose only relevant MPAs
+
+# 1. Limit the protected areas to marine areas - remove land PAs.
+## 1.1 Manually dowload administrative boundaries for the coutnries in my list:
+## from: https://gadm.org/data.html : Select the data tab, a menu with a drop down list appears, where you can select the country that you want to download, and the different levels: level 0 (lowest level of detail is needed)
+## NB! To automate: When you hovver over the format that you want to download, the www address for the actual file appears - lets use this with pattern recognition to download the files that we need.
+
+#path to gadm files
+path_gadm <-
+        tempfile(pattern = paste0("gadm36_", my_country_codes, "_0_sf"),
+                 fileext = ".rds")
+
+
+downloaded_urls_gadm <- list()
+for (m in seq_along(my_country_codes)) {
+        downloaded_urls_gadm[m] <-
+                paste0(
+                        "https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_",
+                        my_country_codes[m] ,
+                        "_0_sf.rds"
+                )
+        #downloaded_gadm_files[m] <- httr::GET(downloaded_urls_gadm[m], httr::write_disk(path_gadm[m], overwrite = TRUE))
+}
+
+downloaded_gadm_files <- list()
+for (n in seq_along(my_country_codes)) {
+        #downloaded_urls_gadm[m] <- paste0("https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_", my_country_codes[m] ,"_0_sf.rds")
+        downloaded_gadm_files[n] <-
+                httr::GET(downloaded_urls_gadm[[n]],
+                          httr::write_disk(path_gadm[n], overwrite = TRUE))
+}
+
+
+# load data (downloaded files of MPA boundaries) into R environment
+shps_gadm <- lapply(path_gadm, function(x) {
+        read_rds(x)
+})
+names(shps_gadm) <- my_country_codes
+
+# combine administrative boundaries into a single sf object
+admin_areas <-
+        mapedit:::combine_list_of_sf(shps_gadm, crs = 4326) %>%
+        lwgeom::st_make_valid()
+#-------------------------------------
+# clipping to marine only
 MPAs_minus_land <- st_difference(MPAs, admin_areas)
+
+
+
+st_crs(admin_areas)
+st_crs(MPAs)
+st_transform(admin_areas,MPAs)
+
 
 tmap::tmap_mode("view")
 # tmap::tm_shape(admin_areas) +
 #         tmap::tm_borders(col = "black") +
-        tmap::tm_shape(MPAs) +
+tmap::tm_shape(MPAs) +
         tmap::tm_borders(col = "forestgreen")
+
+
+########## START HERE - this will save re-downloading all the files - temp
+# write_rds(shps_clean, "./data/preprocessed/shps_clean.rds")
+# write_rds(shps_gadm, "./data/preprocessed/shps_gadm.rds")
+# shps_clean <- read_rds("./data/preprocessed/shps_clean.rds")
+# shps_gadm <- read_rds("./data/preprocessed/shps_gadm.rds")
+#check projections
+# map(shps_clean, st_crs) # assumed to be wgs84, lat long
+## countries are in the input folder
+# gadm_dir <- "E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra/data/gadm_countries/"
+# gadm_files <- list.files(gadm_dir)
+# map(shps_gadm, st_crs)
+#--------------------
+
 
 # plot(st_geometry(MPAs_minus_land))
 
 #%>%
-         #st_intersection(KEN_gadm) %>%
-         # rbind(KEN_MPA %>%
-         #               filter(MARINE == "marine") %>%
-         #               st_difference(KEN_gadm)) %>%
-         # rbind(KEN_MPA %>% 
-         #filter(!MARINE %in% c("terrestrial",
-         #                                            "marine"))
+#st_intersection(KEN_gadm) %>%
+# rbind(KEN_MPA %>%
+#               filter(MARINE == "marine") %>%
+#               st_difference(KEN_gadm)) %>%
+# rbind(KEN_MPA %>%
+#filter(!MARINE %in% c("terrestrial",
+#                                            "marine"))
 
 
- 
