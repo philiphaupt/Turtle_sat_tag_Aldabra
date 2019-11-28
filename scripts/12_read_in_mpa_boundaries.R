@@ -76,9 +76,12 @@ SOM_clean <- wdpa_clean(shps[[1]]) # Somalia's protected areas is problematic: t
 shps_clean <- purrr::map(.x = shps[2:7], .f = wdpa_clean) # works
 #--------------------------------------------------
 
+st_transform_4326 <- function(x) {sf::st_transform(x, crs = 4326)}
+shps_clean_repro <- purrr::map(shps_clean, st_transform_4326)
+map(shps_clean_repro, st_crs)
 # seperate list into shapes and apply st_union *super handy remember this function!
-list2env(shps_clean,globalenv()) # The objects in the list have to be named to work!
-list2env(shps[1],globalenv())
+# list2env(shps_clean,globalenv()) # The objects in the list have to be named to work!
+# list2env(shps[1],globalenv())
 
 # combine protected areas into a single sf object
 protected_areas <- mapedit:::combine_list_of_sf(shps_clean, crs = 4326) %>% 
