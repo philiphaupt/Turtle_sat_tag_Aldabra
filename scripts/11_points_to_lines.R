@@ -32,4 +32,5 @@ turtle_lines[c(1,2,3,4,5,7,8),] %>%
                    alpha = 0.95)
 
 
+write_rds(turtle_lines, "./data/turtle_lines.rds")
 sf::st_write(turtle_lines, "turtle_points_start_to_end.gpkg", layer = "plotting_lines", layer_options = c("update = TRUE"))
