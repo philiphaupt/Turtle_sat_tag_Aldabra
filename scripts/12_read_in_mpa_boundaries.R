@@ -100,10 +100,17 @@ class_geom_in_list <- function(x) {
 }
 purrr::map(.x = pa_raw[1:7], .f = class_geom_in_list)
 
+#clean data
+pa_raw_clean <- purrr::map(.x = pa_raw[2:7], .f = wdpa_clean) # works
+
+# reproject data to longitude/latitude for plotting
+st_transform_4326 <- function(x) {sf::st_transform(x, crs = 4326)}
+pa_clean_4326 <- purrr::map(.x = pa_raw_clean, st_transform_4326)
+purrr::map(.x = pa_clean_4326, .f = class_geom_in_list)
 #--------------------
 # combine protected areas into a single sf object - remove Somlia: Somalia's protected areas is problematic: they are only represented by points, and none are MARINE - so answer is that it is not relvant.
 protected_areas <-
-        mapedit:::combine_list_of_sf(pa_raw[2:7], crs = 4236) %>%
+        mapedit:::combine_list_of_sf(pa_clean_4326, crs = 4236) %>%
         lwgeom::st_make_valid()
 
 #--------------------------------------------------
@@ -172,7 +179,7 @@ protected_areas <-
 #          filter(!MARINE == "terrestrial")
 
 MPAs <- protected_areas %>%
-        dplyr::filter(!MARINE == 0) %>%
+        dplyr::filter(!MARINE == "terrestrial") %>%
         lwgeom::st_make_valid() %>% 
         st_as_sf()
 
@@ -181,10 +188,6 @@ class(MPAs)
 tmap_mode("view")
 tm_shape(MPAs) +
         tm_borders(col = "forestgreen")
-
-# To follow up:
-MPAs_clean <- wdpa_clean(MPAs$geometry, crs = 4326) # Error? Error: x does not inherit from class sf
-
 
 #---------------------------------------------
 # Choose only relevant MPAs
@@ -231,46 +234,26 @@ admin_areas <-
         mapedit:::combine_list_of_sf(shps_gadm, crs = 4326) %>%
         lwgeom::st_make_valid()
 #-------------------------------------
-# clipping to marine only
-MPAs_minus_land <- st_difference(MPAs, admin_areas)
-
-
-
+#test projections match to allow clipping:
 st_crs(admin_areas)
 st_crs(MPAs)
-st_transform(admin_areas,MPAs)
+admin_areas_proj <- st_transform(admin_areas,crs = st_crs(MPAs)) # reproject to match
+
+# clipping to marine only
+MPAs_minus_land <- st_difference(MPAs, admin_areas_proj)
+
 
 
 tmap::tmap_mode("view")
-# tmap::tm_shape(admin_areas) +
-#         tmap::tm_borders(col = "black") +
-tmap::tm_shape(MPAs) +
-        tmap::tm_borders(col = "forestgreen")
+tmap::tm_shape(admin_areas) +
+        tmap::tm_borders(col = "black") +
+        tmap::tm_shape(MPAs_minus_land) +
+        tmap::tm_borders(col = "forestgreen") +
+        tmap::tm_fill(col = "IUCN_CAT")
 
 
-########## START HERE - this will save re-downloading all the files - temp
-# write_rds(shps_clean, "./data/preprocessed/shps_clean.rds")
-# write_rds(shps_gadm, "./data/preprocessed/shps_gadm.rds")
-# shps_clean <- read_rds("./data/preprocessed/shps_clean.rds")
-# shps_gadm <- read_rds("./data/preprocessed/shps_gadm.rds")
-#check projections
-# map(shps_clean, st_crs) # assumed to be wgs84, lat long
-## countries are in the input folder
-# gadm_dir <- "E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra/data/gadm_countries/"
-# gadm_files <- list.files(gadm_dir)
-# map(shps_gadm, st_crs)
-#--------------------
-
-
-# plot(st_geometry(MPAs_minus_land))
-
-#%>%
-#st_intersection(KEN_gadm) %>%
-# rbind(KEN_MPA %>%
-#               filter(MARINE == "marine") %>%
-#               st_difference(KEN_gadm)) %>%
-# rbind(KEN_MPA %>%
-#filter(!MARINE %in% c("terrestrial",
-#                                            "marine"))
+########## Write to R object this will save re-downloading all the files - temp
+write_rds(MPAs_minus_land, "./data/preprocessed/MPAs_minus_land.rds")
+write_rds(admin_areas, "./data/preprocessed/admin_areas.rds")
 
 
