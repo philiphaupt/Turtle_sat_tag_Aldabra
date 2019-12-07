@@ -120,30 +120,10 @@ protected_areas <-
 
 
 #--------------------------------------------------
-# make sure projections match
-# st_transform_4326 <- function(x) {sf::st_transform(x, crs = 4326)}
-# pa_raw_clean_repro <- purrr::map(pa_raw_clean, st_transform_4326)
-# map(pa_raw_clean_repro, st_crs)
 
 # seperate list into shapes and apply st_union *super handy remember this function!
 # list2env(pa_raw_clean,globalenv()) # The objects in the list have to be named to work!
 # list2env([1],globalenv())
-
-
-
-# the below did not work - notes for now, but dead code
-# pa_aoi <- st_union(call(as.vector(my_countries_df[2:8,2])))# union - needs fixing - somthing not quite right
-# my_countries_mpa_union <- sf::st_union(TZA, MOZ, COM, KEN, SYC, MUS, MDG)
-
-
-
-# Alterantive source of gadm data?:
-# library(raster)
-# misc = list()
-# misc$countries = c("ZAF", "LSO", "SWZ", "ZWE", "MOZ", "NAM", "BWA")
-# ctry_shps = do.call("bind", lapply(misc$countries,
-#                                    function(x) getData('GADM', country=x, level=0)))
-
 
 #
 # clip Malta's protected areas to the coastline
@@ -155,35 +135,14 @@ protected_areas <-
 #                       st_difference(mlt_boundary_data)) %>%
 #         rbind(mlt_pa_data %>% filter(!MARINE %in% c("terrestrial",
 #                                                     "marine")))
-#test
-
-
-#test clipping
-# names(shps_gadm) <- paste0(my_country_codes, "_gadm")
-#
-# list2env(shps_gadm,globalenv())
-#
-# class(KEN)
-# class(KEN_gadm)
-#
-# KEN_gadm <- KEN_gadm %>% as_Spatial() %>%
-#         st_as_sf()
-#
-#
-# st_crs(KEN_gadm)
-# st_crs(KEN)
-# KEN <- st_transform(KEN, 4326)
 #-------------------------------------------------------
-#START HERE
-# MPAs_and_partial <- protected_areas %>%
-#          filter(!MARINE == "terrestrial")
+# Choose only marine and partial marine protected areas to be included
 
 MPAs <- protected_areas %>%
         dplyr::filter(!MARINE == "terrestrial") %>%
         lwgeom::st_make_valid() %>% 
         st_as_sf()
 
-class(MPAs)
 #view the protected areas on a map
 tmap_mode("view")
 tm_shape(MPAs) +
@@ -238,8 +197,10 @@ admin_areas <-
 st_crs(admin_areas)
 st_crs(MPAs)
 admin_areas_proj <- st_transform(admin_areas,crs = st_crs(MPAs)) # reproject to match
+write_rds(admin_areas_proj,"./data/admin_areas_proj.rds")
 
 # clipping to marine only
+
 MPAs_minus_land <- st_difference(MPAs, admin_areas_proj)
 
 
