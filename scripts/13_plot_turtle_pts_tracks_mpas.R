@@ -17,7 +17,7 @@ turtle_points_start_to_end <-
 turtle_lines <- read_rds("./data/turtle_lines.rds")
 
 # Read in EEZs
-eez_dir <- "E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra/data/World_EEZ_v11_20191118_gpkg/"
+eez_dir <- "./data/World_EEZ_v11_20191118_gpkg/" #E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra
 eez <- read_sf(paste0(eez_dir,"eez_boundaries_v11.gpkg"))
 
 # plot: Mpa showing the turtle tracks and points from START to FINISH: Defined (as earlier) as the last point inside the MPA to the first point at the feeding ground.
@@ -81,6 +81,7 @@ turtle_track_map <- world %>%
                 legend.bg.color = "white",
                 legend.text.size = 1
         )
+turtle_track_map
 
 tmap_save(turtle_track_map, "./turtle_track_map.png", width = 12, height = 7.5, units = "cm", dpi = 500)
 
@@ -92,7 +93,7 @@ turtle_track_map_bw <- world %>%
         tm_shape(bbox=tmaptools::bb(matrix(c(37,-15,58, 3),2,2))) +
         tm_fill("gray87") +
         tm_shape(eez)+
-        tm_borders("dotdash")
+        tm_borders("dotdash") +
         tm_shape(admin_areas_proj) +
         tm_graticules(alpha = 0.2,
                       labels.size = 0.85,
@@ -125,7 +126,7 @@ turtle_track_map_bw <- world %>%
         tm_shape() +
         tm_symbols(
                 col = "tag_id",
-                shape = "tag_id"
+                shape = "tag_id",
                 shapes = c(15,16,17,18,19,20,3,10),
                 palette = "gray",
                 scale = .2,
