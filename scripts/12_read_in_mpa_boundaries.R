@@ -146,8 +146,17 @@ MPAs <- protected_areas %>%
 #view the protected areas on a map
 tmap_mode("view")
 tm_shape(MPAs) +
+        tm_polygons()+
         tm_borders(col = "forestgreen")
 
+
+#---------------------------------------------
+# MPAs to remove using their WDPAID numbers
+# Erroneous or dubious
+
+MPAs <- MPAs %>% dplyr::filter(!WDPAID == 305172) %>% 
+        dplyr::filter(!WDPAID == 555542730)
+write_rds(MPAs, "./data/MPAs.rds")
 #---------------------------------------------
 # Choose only relevant MPAs
 
@@ -198,7 +207,7 @@ st_crs(admin_areas)
 st_crs(MPAs)
 admin_areas_proj <- st_transform(admin_areas,crs = st_crs(MPAs)) # reproject to match
 write_rds(admin_areas_proj,"./data/admin_areas_proj.rds")
-
+admin_areas_proj <- read_rds("./data/admin_areas_proj.rds")
 # clipping to marine only
 
 MPAs_minus_land <- st_difference(MPAs, admin_areas_proj)
