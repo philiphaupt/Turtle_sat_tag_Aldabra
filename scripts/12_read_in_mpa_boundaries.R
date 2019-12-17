@@ -139,7 +139,7 @@ protected_areas <-
 # Choose only marine and partial marine protected areas to be included
 
 MPAs <- protected_areas %>%
-        dplyr::filter(!MARINE == "terrestrial") %>%
+        dplyr::filter(MARINE == "marine") %>%
         lwgeom::st_make_valid() %>% 
         st_as_sf()
 
