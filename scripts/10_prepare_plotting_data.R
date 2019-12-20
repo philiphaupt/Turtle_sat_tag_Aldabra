@@ -16,4 +16,4 @@ turtle_points_start_to_end <- rbind(last_pts_inside_mpa, pts_subset_outside_mpa_
 
 write_rds(turtle_points_start_to_end,"./data/turtle_points_start_to_end.rds")
 
-sf::st_write(turtle_points_start_to_end, "turtle_points_start_to_end.gpkg", layer = "plotting_points")
+sf::st_write(turtle_points_start_to_end, "./output/turtle_tracks_start_to_end.gpkg", layer = "Sat_tag_points", layer_options = c("update = TRUE"))
