@@ -157,6 +157,7 @@ tm_shape(MPAs) +
 MPAs <- MPAs %>% dplyr::filter(!WDPAID == 305172) %>% 
         dplyr::filter(!WDPAID == 555542730)
 write_rds(MPAs, "./data/MPAs.rds")
+sf::write_sf(MPAs, "./output/MPAs_wgs84.gpkg", layer = "MPAs_in_WIO", driver = "GPkG")
 #---------------------------------------------
 # Choose only relevant MPAs
 
@@ -207,7 +208,8 @@ st_crs(admin_areas)
 st_crs(MPAs)
 admin_areas_proj <- st_transform(admin_areas,crs = st_crs(MPAs)) # reproject to match
 write_rds(admin_areas_proj,"./data/admin_areas_proj.rds")
-admin_areas_proj <- read_rds("./data/admin_areas_proj.rds")
+sf::write_sf(admin_areas_proj, "./output/admin_areas_proj.gpkg", layer = "countries",driver = "GPkG")
+# admin_areas_proj <- read_rds("./data/admin_areas_proj.rds")
 # clipping to marine only
 
 MPAs_minus_land <- st_difference(MPAs, admin_areas_proj)
