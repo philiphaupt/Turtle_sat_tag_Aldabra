@@ -2,7 +2,7 @@
 library(sf)
 library(tidyverse)
 library(data.table)
-
+library(tmap)
 
 # read last points
 last_pts <- read_rds("./data/last_pts.rds")
@@ -71,4 +71,4 @@ tm_shape(MPAs) +
         #tm_text("distance_m")
 
 dist_no_geom <- dist_df %>% dplyr::select(-geometry)
-write.csv(dist_df, "./data/dist_no_geom_no_points_greater_6point5km2.csv")
+write.csv(dist_no_geom, "./data/dist_no_geom_no_points_greater_6point5km2.csv")
