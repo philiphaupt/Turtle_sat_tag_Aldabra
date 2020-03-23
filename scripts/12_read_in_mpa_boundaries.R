@@ -22,7 +22,15 @@ my_country_list <-
           "Comoros",
           "Kenya",
           "Seychelles",
-          "Madagascar")
+          "Madagascar",
+          "Malawi",#from here is only for GADM
+          "Sudan",
+          "Zambia",
+          "Burundi",
+          "Uganda",
+          "Rwanda",
+          "Congo - Kinshasa"
+          )
 #--------------------------------------------------------------------
 
 
@@ -208,7 +216,7 @@ st_crs(admin_areas)
 st_crs(MPAs)
 admin_areas_proj <- st_transform(admin_areas,crs = st_crs(MPAs)) # reproject to match
 write_rds(admin_areas_proj,"./data/admin_areas_proj.rds")
-sf::write_sf(admin_areas_proj, "./output/admin_areas_proj.gpkg", layer = "countries",driver = "GPkG")
+sf::write_sf(admin_areas_proj, "./output/admin_areas_proj.gpkg", layer = "countries",driver = "GPkG")#_extended_wgs84
 # admin_areas_proj <- read_rds("./data/admin_areas_proj.rds")
 # clipping to marine only
 
