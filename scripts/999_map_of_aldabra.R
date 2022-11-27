@@ -34,6 +34,7 @@ aldabra_map <- tmap::tm_shape(aldabra) +
         tm_layout(inner.margins = c(0.1, 0.05)) +
         tm_scale_bar(breaks = c(0, 5, 10), text.size = 1)
         
-        
+aldabra_map  
         # 
 tmap_save(aldabra_map, "./aldabra_map.png", width = 15, height = 7.5, units = "cm", dpi = 500)
+

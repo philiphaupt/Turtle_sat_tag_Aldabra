@@ -32,6 +32,7 @@ mpa_in_df <- st_set_geometry(last_pts_inside_mpa, NULL) %>%
 travel_time <- full_join(mpa_in_df,
                          fdg_df,
                          by = "tag_id")
+
 #final calculation for number of days taken        ) 
 travel_time$time_in_days <- difftime(travel_time$utc_end, travel_time$utc_start)#, format = "%Y-%m-%d %H:%M") # 3rd gives NA
 

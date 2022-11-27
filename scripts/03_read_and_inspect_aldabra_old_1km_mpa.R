@@ -1,4 +1,4 @@
-#AIM: Rread and inspect the boudnaries of Aldabra Atoll's marine proteted area (MPA) to decide which one to use in determining the start (first satellite tag point) outside of MPAs
+# AIM: Rread and inspect the boudnaries of Aldabra Atoll's marine proteted area (MPA) to decide which one to use in determining the start (first satellite tag point) outside of MPAs
 
 library(tidyverse)
 library(sf)
@@ -16,7 +16,7 @@ turtle_pts_sf_utm38s <- read_rds("./data/turtle_pts_sf_utm38s.rds")
 # OLD 1km mpa boundary
 
 ald_mpa_dir <-
-        "E:/stats/aldabra/turtles/turtles_ald_sat_tag_2011_2014/Turtle_sat_tag_Aldabra/data/input/mpa_boundary-simplified30_utm/"
+        "./data/input/mpa_boundary-simplified30_utm/"
 ald_mpa_1km <-
         read_sf(paste0(ald_mpa_dir, "mpa_boundary-simplified30_utm.shp"))
 ald_mpa_1km$label <- "MPA"

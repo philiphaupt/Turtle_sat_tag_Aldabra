@@ -94,14 +94,14 @@ my_country_codes <- unlist(my_country_codes)
 #
 
 pa_raw <-
-         lapply(my_country_list, function(x) {
+         lapply(my_country_codes, function(x) {
                  wdpar::wdpa_fetch(x)
          })
 
 # assign the country names to each sf object
 names(pa_raw) <- my_country_codes
-purrr::map(pa_raw, names)
-purrr::map(pa_raw, class)
+# purrr::map(pa_raw, names)
+# purrr::map(pa_raw, class)
 
 class_geom_in_list <- function(x) {
         x$geometry %>% class()
